@@ -14,7 +14,7 @@ import kotlin.coroutines.CoroutineContext
 abstract class AbstractExchange(parentJob: Job) : CoroutineScope {
     protected val LOGGER = LoggerFactory.getLogger(this::class.java)
 
-    protected val job = Job(parentJob)
+    protected val job = SupervisorJob(parentJob)
 
     override val coroutineContext: CoroutineContext by lazy { Dispatchers.Default + job }
 
