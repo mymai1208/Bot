@@ -1,6 +1,7 @@
 package net.mymai1208.bot.exchange
 
 import dev.gustavoavila.websocketclient.WebSocketClient
+import io.ktor.client.plugins.api.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.consumeEach
@@ -10,6 +11,7 @@ import org.slf4j.LoggerFactory
 import java.net.SocketTimeoutException
 import java.net.URI
 import kotlin.coroutines.CoroutineContext
+import kotlin.time.Duration.Companion.seconds
 
 abstract class AbstractExchange(parentJob: Job) : CoroutineScope {
     protected val LOGGER = LoggerFactory.getLogger(this::class.java)
@@ -97,6 +99,10 @@ abstract class AbstractExchange(parentJob: Job) : CoroutineScope {
                 sendCoroutine?.cancel()
 
                 LOGGER.info("closed websocket session Reason: $reason / ${description ?: "Empty"}")
+
+                if(isReConnect) {
+                    connect(true)
+                }
             }
         }
 
