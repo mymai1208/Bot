@@ -1,14 +1,15 @@
 package net.mymai1208.bot.exchange.coinbase
 
 import kotlinx.coroutines.Job
-import kotlinx.serialization.json.JsonElement
+import kotlinx.coroutines.delay
+import kotlinx.serialization.json.*
 import net.mymai1208.bot.exchange.AbstractExchange
 
 class Coinbase(job: Job) : AbstractExchange(job) {
     override val ENDPOINT: String = "wss://ws-feed.exchange.coinbase.com"
 
     override suspend fun onConnect() {
-        TODO("Not yet implemented")
+
     }
 
     override suspend fun onClose() {
@@ -16,10 +17,30 @@ class Coinbase(job: Job) : AbstractExchange(job) {
     }
 
     override suspend fun isResponse(jsonElement: JsonElement): Boolean {
-        TODO("Not yet implemented")
+        if(jsonElement !is JsonObject) {
+            return false
+        }
+
+        return jsonElement.jsonObject["type"]?.jsonPrimitive?.content == "subscriptions"
     }
 
     override suspend fun waitResponse(request: JsonElement): JsonElement? {
-        TODO("Not yet implemented")
+        return null
+    }
+
+    private suspend fun subscribeLevel2(pairs: List<String>): Boolean {
+        send {
+            put("type", "subscribe")
+
+            putJsonArray("product_ids") {
+                pairs.forEach { add(it) }
+            }
+            putJsonArray("channels") {
+                add("level2_batch")
+            }
+
+        }
+
+        return true
     }
 }

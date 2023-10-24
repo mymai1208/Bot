@@ -8,6 +8,7 @@ import kotlinx.coroutines.channels.consumeEach
 import kotlinx.coroutines.flow.flow
 import kotlinx.serialization.json.*
 import org.slf4j.LoggerFactory
+import java.io.IOException
 import java.net.SocketTimeoutException
 import java.net.URI
 import kotlin.coroutines.CoroutineContext
@@ -89,6 +90,10 @@ abstract class AbstractExchange(parentJob: Job) : CoroutineScope {
                 sendCoroutine?.cancel()
 
                 LOGGER.error("exception", e)
+
+                if(e !is IOException && isReConnect) {
+                    connect(true)
+                }
             }
 
             override fun onCloseReceived(reason: Int, description: String?) {
@@ -107,11 +112,11 @@ abstract class AbstractExchange(parentJob: Job) : CoroutineScope {
         }
 
         if(isReConnect) {
-            client.enableAutomaticReconnection(5000)
+            client.enableAutomaticReconnection(1000 * 60)
         }
 
-        client.setConnectTimeout(10000)
-        client.setReadTimeout(60000)
+        client.setConnectTimeout(1000 * 10)
+        client.setReadTimeout(1000 * 60)
 
         client.connect()
     }
