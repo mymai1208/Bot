@@ -9,9 +9,11 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.serialization.json.*
 import org.slf4j.LoggerFactory
 import java.io.IOException
+import java.net.SocketException
 import java.net.SocketTimeoutException
 import java.net.URI
 import kotlin.coroutines.CoroutineContext
+import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
 
 abstract class AbstractExchange(parentJob: Job) : CoroutineScope {
@@ -24,7 +26,7 @@ abstract class AbstractExchange(parentJob: Job) : CoroutineScope {
     abstract val ENDPOINT: String
 
     abstract suspend fun onConnect()
-    abstract suspend fun onClose()
+    abstract suspend fun onClose(isForce: Boolean)
     abstract suspend fun isResponse(jsonElement: JsonElement): Boolean
     abstract suspend fun waitResponse(request: JsonElement): JsonElement?
 
@@ -38,8 +40,10 @@ abstract class AbstractExchange(parentJob: Job) : CoroutineScope {
 
             override fun onOpen() {
                 sendCoroutine = launch {
-                    sendQueue.consumeEach {
-                        send(it.toString())
+                    while (isActive) {
+                        val json = sendQueue.receive()
+
+                        send(json.toString())
 
                         waitRateLimit()
                     }
@@ -83,36 +87,25 @@ abstract class AbstractExchange(parentJob: Job) : CoroutineScope {
                     return
                 }
 
-                runBlocking {
-                    onClose()
-                }
-
-                sendCoroutine?.cancel()
-
                 LOGGER.error("exception", e)
-
-                if(e !is IOException && isReConnect) {
-                    connect(true)
-                }
             }
 
             override fun onCloseReceived(reason: Int, description: String?) {
                 runBlocking {
-                    onClose()
+                    onClose(false)
+                    sendCoroutine?.cancelAndJoin()
                 }
-
-                sendCoroutine?.cancel()
 
                 LOGGER.info("closed websocket session Reason: $reason / ${description ?: "Empty"}")
 
                 if(isReConnect) {
-                    connect(true)
+                    launch {
+                        delay(1.minutes.inWholeMilliseconds)
+
+                        connect(true)
+                    }
                 }
             }
-        }
-
-        if(isReConnect) {
-            client.enableAutomaticReconnection(1000 * 60)
         }
 
         client.setConnectTimeout(1000 * 10)

@@ -88,8 +88,10 @@ class Binance(job: Job) : AbstractExchange(job) {
         subscribe("!miniTicker@arr")
     }
 
-    override suspend fun onClose() {
-        receiverJob?.cancel()
+    override suspend fun onClose(isForce: Boolean) {
+        if(isForce) {
+            receiverJob?.cancel()
+        }
 
         processors.forEach { it.value.stop() }
         processors.clear()

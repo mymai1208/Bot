@@ -12,7 +12,7 @@ class Coinbase(job: Job) : AbstractExchange(job) {
 
     }
 
-    override suspend fun onClose() {
+    override suspend fun onClose(isForce: Boolean) {
         TODO("Not yet implemented")
     }
 

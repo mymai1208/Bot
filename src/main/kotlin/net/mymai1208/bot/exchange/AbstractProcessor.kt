@@ -128,7 +128,9 @@ abstract class AbstractProcessor(private val pair: String, parent: Job) : Corout
         if (cacheAmount != 0.0) {
             val changeAmount = Math.abs(amount - cacheAmount)
 
-            LOGGER.info("${tradeType.name} pair $pair price $price amount $changeAmount")
+            if((changeAmount * price.toDouble()) > 25000) {
+                LOGGER.info("${tradeType.name} pair $pair price $price amount $changeAmount")
+            }
 
             val id = getId()!!
 
