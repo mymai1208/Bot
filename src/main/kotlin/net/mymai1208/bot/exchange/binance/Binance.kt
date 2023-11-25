@@ -37,7 +37,7 @@ class Binance(job: Job) : AbstractExchange(job) {
     override suspend fun onConnect() {
         sequence = AtomicInteger()
 
-        val flow = recvQueue.receiveAsFlow()
+        val flow = recvQueue!!.receiveAsFlow()
 
         receiverJob = flow
             .filter { it is JsonArray }
@@ -109,7 +109,7 @@ class Binance(job: Job) : AbstractExchange(job) {
 
     override suspend fun waitResponse(request: JsonElement): JsonElement? {
         repeat(10) {
-            val json = responseQueue.receive().jsonObject
+            val json = responseQueue!!.receive().jsonObject
 
             val responseId = json["id"]?.jsonPrimitive?.int
 

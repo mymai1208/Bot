@@ -31,10 +31,13 @@ abstract class AbstractExchange(parentJob: Job) : CoroutineScope {
     abstract suspend fun waitResponse(request: JsonElement): JsonElement?
 
     private val sendQueue = Channel<JsonElement>(Channel.UNLIMITED)
-    protected val recvQueue = Channel<JsonElement>(Channel.UNLIMITED)
-    protected val responseQueue = Channel<JsonElement>(Channel.UNLIMITED)
+    protected var recvQueue: Channel<JsonElement>? = null
+    protected var responseQueue: Channel<JsonElement>? = null
 
     fun connect(isReConnect: Boolean = true) {
+        recvQueue = Channel(Channel.UNLIMITED)
+        responseQueue = Channel(Channel.UNLIMITED)
+
         val client = object : WebSocketClient(URI.create(ENDPOINT)) {
             var sendCoroutine: Job? = null
 
@@ -59,10 +62,10 @@ abstract class AbstractExchange(parentJob: Job) : CoroutineScope {
 
                 launch {
                     if (isResponse(json)) {
-                        responseQueue.send(json)
+                        responseQueue?.send(json)
                     }
 
-                    recvQueue.send(json)
+                    recvQueue?.send(json)
                 }
             }
 
@@ -79,14 +82,6 @@ abstract class AbstractExchange(parentJob: Job) : CoroutineScope {
             }
 
             override fun onException(e: Exception) {
-                if(e is CancellationException) {
-                    return
-                }
-
-                if(e is SocketTimeoutException) {
-                    return
-                }
-
                 LOGGER.error("exception", e)
             }
 
@@ -94,6 +89,9 @@ abstract class AbstractExchange(parentJob: Job) : CoroutineScope {
                 runBlocking {
                     onClose(false)
                     sendCoroutine?.cancelAndJoin()
+
+                    recvQueue?.close()
+                    responseQueue?.close()
                 }
 
                 LOGGER.info("closed websocket session Reason: $reason / ${description ?: "Empty"}")
@@ -102,7 +100,7 @@ abstract class AbstractExchange(parentJob: Job) : CoroutineScope {
                     launch {
                         delay(1.minutes.inWholeMilliseconds)
 
-                        connect(true)
+                        this@AbstractExchange.connect()
                     }
                 }
             }

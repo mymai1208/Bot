@@ -115,8 +115,8 @@ abstract class AbstractProcessor(private val pair: String, parent: Job) : Corout
         //キャッシュクリア時のスレッド競合対策
         if(cacheMutex.holdsLock(cacheRemover)) {
             //waiting unlock
-            cacheMutex.lock(caches)
-            cacheMutex.unlock(caches)
+            cacheMutex.lock()
+            cacheMutex.unlock()
         }
 
         if (!caches.containsKey(price)) {
